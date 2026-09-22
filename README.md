@@ -94,34 +94,43 @@ The notebook includes a progression of query types worth testing against the sch
 
 ## Performance evaluation
 
-I evaluated the existing system against manually authored SQL using four
+I tested the existing system against manually authored SQL using four
 representative questions from the notebook: simple retrieval, multi-column
-retrieval, a foreign-key filter, and a table join. The benchmark used the
-local Chinook SQLite database and Python `time.perf_counter()` timings. The
-application code was not modified for the evaluation.
+retrieval, a foreign-key filter, and a table join. For each question, I ran the
+manual SQL against the local Chinook SQLite database and then asked the
+Text-to-SQL system the equivalent question in natural language. I measured
+execution time with Python's `time.perf_counter()` without modifying the
+application code.
 
-| Metric                                  | Manual SQL |          Text-to-SQL |
-| --------------------------------------- | ---------: | -------------------: |
-| Successful queries                      | 4/4 (100%) |           4/4 (100%) |
-| Average measured execution/task latency | 0.69575 ms |        1093.07202 ms |
-| End-to-end measured latency difference  |          - | +1092.37627 ms/query |
+| Metric                             | Manual SQL |          Text-to-SQL |
+| ---------------------------------- | ---------: | -------------------: |
+| Successful queries                 | 4/4 (100%) |           4/4 (100%) |
+| Average measured system time       | 0.69575 ms |        1093.07202 ms |
+| Difference in measured system time |          - | +1092.37627 ms/query |
 
-The measured execution comparison isolates system latency: local SQL execution
-is much faster because the Text-to-SQL path includes two LLM calls, one to
-generate SQL and one to produce the natural-language answer.
+The measured system-time comparison shows the expected trade-off: direct SQL
+execution is faster, while the Text-to-SQL workflow adds two LLM calls, one to
+generate the SQL query and one to explain the result.
 
-To estimate the human authoring impact, I also applied an explicit 40 WPM
-typing assumption to the actual benchmark text. Estimated average task time was
-18.60070 seconds/query for typing and executing SQL manually versus 12.56807
-seconds/query for entering a natural-language question and running the
-Text-to-SQL pipeline. This corresponds to an estimated 6.03262 seconds saved
-per query, or a 32.43% reduction. This estimate excludes SQL debugging,
-validation, and result interpretation, and is not presented as a measured human
-study.
+To estimate practical task impact, I assumed an average human typing speed of
+40 WPM and used the actual text from the four benchmark questions and SQL
+statements. Using the standard convention that one typed word equals five
+characters, the estimated average entry time was:
 
-The full methodology, input questions, raw timings, calculations, and excluded
-quota-limited candidate query are available in
-[`text2sql_impact.txt`](text2sql_impact.txt).
+- Manual SQL: 18.60000 seconds/query
+- Natural-language question: 11.47500 seconds/query
+
+After adding the measured system time, the estimated total task time was
+18.60070 seconds/query for manually typing and executing SQL versus 12.56807
+seconds/query for entering a natural-language question and using the tool. This
+represents an estimated 6.03262 seconds saved per query, or a 32.43% reduction
+in task completion time.
+
+The conclusion is that the tool does not reduce raw execution latency, but it
+can reduce the estimated end-to-end task time by replacing manual SQL authoring
+with natural-language input. The typing comparison is an explicit estimate,
+not a controlled human study, and does not include SQL debugging, validation, or
+result interpretation.
 
 ## Database schema
 
