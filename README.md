@@ -18,22 +18,24 @@ question ─▶ [LLM: write SQL] ─▶ SQL query ─▶ [run against DB] ─▶
 
 ## Files
 
-| File | Description |
-|---|---|
-| `agent.ipynb` | Main notebook — defines the schema loader, LLM setup, prompt chains, and runs example queries |
-| `Chinook.db` | Sample SQLite database (Artists, Albums, Tracks, Customers, Invoices, etc.) |
-| `requirements.txt` | Python dependencies |
-| `_env.example` | Template for the `.env` file with required API keys |
+| File               | Description                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| `agent.ipynb`      | Main notebook — defines the schema loader, LLM setup, prompt chains, and runs example queries |
+| `Chinook.db`       | Sample SQLite database (Artists, Albums, Tracks, Customers, Invoices, etc.)                   |
+| `requirements.txt` | Python dependencies                                                                           |
+| `_env.example`     | Template for the `.env` file with required API keys                                           |
 
 ## Setup
 
 1. **Create a virtual environment** (recommended)
+
    ```bash
    python -m venv .venv
    source .venv/bin/activate   # on Windows: .venv\Scripts\activate
    ```
 
 2. **Install dependencies**
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -41,9 +43,11 @@ question ─▶ [LLM: write SQL] ─▶ SQL query ─▶ [run against DB] ─▶
 3. **Configure environment variables**
 
    Copy `_env.example` to `.env` and fill in your own keys:
+
    ```bash
    cp _env.example .env
    ```
+
    ```
    HUGGINGFACEHUB_API_TOKEN=your_huggingface_token_here
    GEMINI_API_KEY=your_gemini_api_key_here
@@ -87,6 +91,37 @@ The notebook includes a progression of query types worth testing against the sch
 3. **Foreign key lookups**: "Give me 10 Albums by the Artist with ID 1"
 4. **Single join**: "Give some Albums by the Artist named Audioslave"
 5. **Multi-level joins**: "Give some Tracks by the Artist named Audioslave"
+
+## Performance evaluation
+
+I evaluated the existing system against manually authored SQL using four
+representative questions from the notebook: simple retrieval, multi-column
+retrieval, a foreign-key filter, and a table join. The benchmark used the
+local Chinook SQLite database and Python `time.perf_counter()` timings. The
+application code was not modified for the evaluation.
+
+| Metric                                  | Manual SQL |          Text-to-SQL |
+| --------------------------------------- | ---------: | -------------------: |
+| Successful queries                      | 4/4 (100%) |           4/4 (100%) |
+| Average measured execution/task latency | 0.69575 ms |        1093.07202 ms |
+| End-to-end measured latency difference  |          - | +1092.37627 ms/query |
+
+The measured execution comparison isolates system latency: local SQL execution
+is much faster because the Text-to-SQL path includes two LLM calls, one to
+generate SQL and one to produce the natural-language answer.
+
+To estimate the human authoring impact, I also applied an explicit 40 WPM
+typing assumption to the actual benchmark text. Estimated average task time was
+18.60070 seconds/query for typing and executing SQL manually versus 12.56807
+seconds/query for entering a natural-language question and running the
+Text-to-SQL pipeline. This corresponds to an estimated 6.03262 seconds saved
+per query, or a 32.43% reduction. This estimate excludes SQL debugging,
+validation, and result interpretation, and is not presented as a measured human
+study.
+
+The full methodology, input questions, raw timings, calculations, and excluded
+quota-limited candidate query are available in
+[`text2sql_impact.txt`](text2sql_impact.txt).
 
 ## Database schema
 
